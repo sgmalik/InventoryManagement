@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { firestore } from '@/firebase';
 import { collection, query, getDocs, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
-import { Box, Button, Typography, Stack, TextField, Modal, Checkbox, FormControlLabel } from '@mui/material';
-import { useRouter } from 'next/navigation';
-import NavBar from '@/components/NavBar'; // Import the NavBar component
+import { Box, Button, Typography, Stack, TextField, Modal, Checkbox, FormControlLabel, CircularProgress, Card, CardContent } from '@mui/material';
+import NavBar from '@/components/NavBar';
 
 export default function Pantry() {
   const [inventory, setInventory] = useState([]);
@@ -13,8 +12,10 @@ export default function Pantry() {
   const [itemName, setItemName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
-  const router = useRouter();
+  const [recipe, setRecipe] = useState(null); // Recipe state
+  const [loadingRecipe, setLoadingRecipe] = useState(false); // Loading state for recipe
 
+  // Fetch and update inventory from Firebase
   const updateInventory = async () => {
     const snapshot = query(collection(firestore, 'inventory'));
     const docs = await getDocs(snapshot);
@@ -28,50 +29,16 @@ export default function Pantry() {
     setInventory(inventoryList);
   };
 
-  const addItem = async (item) => {
-    const docRef = doc(collection(firestore, 'inventory'), item);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const { quantity } = docSnap.data();
-      await setDoc(docRef, { quantity: quantity + 1 });
-    } else {
-      await setDoc(docRef, { quantity: 1 });
-    }
-    await updateInventory();
-  };
-
-  const removeItem = async (item) => {
-    const docRef = doc(collection(firestore, 'inventory'), item);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const { quantity } = docSnap.data();
-      if (quantity == 1) {
-        await deleteDoc(docRef);
-      } else {
-        await setDoc(docRef, {
-          quantity: quantity - 1,
-        });
-      }
-    }
-    await updateInventory();
-  };
-
-  const handleOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
   useEffect(() => {
     updateInventory();
   }, []);
 
+  // Handle searching of pantry items
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
   };
 
+  // Handle selection of items
   const handleSelect = (name) => {
     setSelectedItems((prevSelected) =>
       prevSelected.includes(name)
@@ -80,8 +47,32 @@ export default function Pantry() {
     );
   };
 
-  const handleGenerateRecipes = () => {
-    router.push(`/recipes?items=${selectedItems.join(',')}`);
+  // Generate recipe by sending selected items to the OpenAI API route
+  const handleGenerateRecipes = async () => {
+    setLoadingRecipe(true);
+    setOpen(true); // Open the modal
+
+    try {
+      const response = await fetch('/api/generateRecipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: selectedItems }),
+      });
+
+      const data = await response.json();
+      setRecipe(data.recipe);
+    } catch (error) {
+      console.error('Error generating recipe:', error);
+      setRecipe('Failed to generate recipe. Please try again.');
+    }
+
+    setLoadingRecipe(false);
+  };
+
+  // Close the modal and reset state
+  const handleClose = () => {
+    setOpen(false);
+    setRecipe(null);
   };
 
   const filteredInventory = inventory.filter((item) =>
@@ -93,6 +84,8 @@ export default function Pantry() {
       <NavBar />
       <Box width="100vw" height="100vh" display="flex" flexDirection="column" alignItems="center" gap={2}>
         <TextField label="Search Items" variant="outlined" value={searchQuery} onChange={handleSearch} />
+        
+        {/* Modal for displaying recipe */}
         <Modal open={open} onClose={handleClose}>
           <Box
             position="absolute"
@@ -110,34 +103,25 @@ export default function Pantry() {
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <Typography variant="h6">Add Item</Typography>
-            <Stack width="100%" direction="row" spacing={2}>
-              <TextField
-                variant="outlined"
-                fullWidth
-                label="Item Name"
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
-              />
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  addItem(itemName);
-                  setItemName('');
-                  handleClose();
-                }}
-              >
-                Add
-              </Button>
-            </Stack>
+            {loadingRecipe ? (
+              <CircularProgress />
+            ) : (
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">Generated Recipe</Typography>
+                  <Typography variant="body1">
+                    {recipe || 'No recipe available.'}
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
           </Box>
         </Modal>
-        <Button variant="contained" onClick={handleOpen}>
-          Add New Item
-        </Button>
+
         <Button variant="contained" onClick={handleGenerateRecipes} disabled={!selectedItems.length}>
           Generate Recipes
         </Button>
+        
         <Box border="1px solid #333" width="800px" mt={2}>
           <Box width="100%" bgcolor="#ADD8E6" p={2} display="flex" justifyContent="center">
             <Typography variant="h4" color="#333">

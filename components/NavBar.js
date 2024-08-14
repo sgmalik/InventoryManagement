@@ -13,7 +13,6 @@ export default function NavBar() {
             Pantry Tracker
           </Typography>
           <Button color="inherit" href="/pantry">Pantry</Button>
-          <Button color="inherit" href="/recipes">Recipes</Button>
           <Button color="inherit" onClick={signOutUser}>Logout</Button>
         </Toolbar>
       </AppBar>

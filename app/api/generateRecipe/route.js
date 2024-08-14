@@ -1,26 +1,24 @@
-import { Configuration, OpenAIApi } from 'openai';
+import { OpenAI } from 'openai';
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-const openai = new OpenAIApi(configuration);
-
 export async function POST(req) {
-  const { items } = await req.json();
-
-  const prompt = `Create a recipe using the following ingredients: ${items.join(', ')}`;
-
   try {
-    const response = await openai.createCompletion({
+    const { items } = await req.json();
+    const prompt = `Create a recipe using the following ingredients: ${items.join(', ')}.`;
+
+    const response = await openai.chat.completions.create({
       model: 'gpt-4',
-      prompt,
-      max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 200,
     });
 
-    const recipe = response.data.choices[0].text;
+    const recipe = response.choices[0].message.content;
     return new Response(JSON.stringify({ recipe }), { status: 200 });
   } catch (error) {
+    console.error('Error generating recipe:', error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }
