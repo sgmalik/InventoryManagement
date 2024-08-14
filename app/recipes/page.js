@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import NavBar from '@/components/NavBar';
 
 export default function Recipes() {
   const [recipe, setRecipe] = useState('');
@@ -28,9 +29,12 @@ export default function Recipes() {
   }, []);
 
   return (
-    <Box width="100vw" height="100vh" display="flex" flexDirection="column" alignItems="center" justifyContent="center" p={4}>
-      <Typography variant="h4" mb={2}>Generated Recipe</Typography>
-      <Typography variant="body1">{recipe}</Typography>
-    </Box>
+    <>
+      <NavBar />
+      <Box width="100vw" height="100vh" display="flex" flexDirection="column" alignItems="center" justifyContent="center" p={4}>
+        <Typography variant="h4" mb={2}>Generated Recipe</Typography>
+        <Typography variant="body1">{recipe}</Typography>
+      </Box>
+    </>
   );
 }
