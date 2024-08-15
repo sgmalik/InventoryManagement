@@ -7,7 +7,7 @@ const openai = new OpenAI({
 export async function POST(req) {
   try {
     const { items } = await req.json();
-    const prompt = `Create a recipe using the following ingredients: ${items.join(', ')}.`;
+    const prompt = `Create a recipe using the following ingredients: ${items.join(', ')}. Be sure to specify what extra ingredients are needed and the steps to make the recipe.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
