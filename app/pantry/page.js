@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { firestore } from '@/firebase';
+import { auth, firestore } from '@/firebase';  // Import auth from firebase
 import { collection, query, getDocs, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { Box, Button, Typography, Stack, TextField, Modal, Checkbox, FormControlLabel, Card, CardContent, CircularProgress } from '@mui/material';
-import NavBar from '@/components/NavBar'; // Import the NavBar component
+import NavBar from '@/components/NavBar';  // Import the NavBar component
+import { onAuthStateChanged } from 'firebase/auth';  // Listen to auth state changes
 
 export default function Pantry() {
   const [inventory, setInventory] = useState([]);
@@ -15,10 +16,25 @@ export default function Pantry() {
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
   const [responseModalOpen, setResponseModalOpen] = useState(false);
+  const [user, setUser] = useState(null);  // Track the current user
 
-  const updateInventory = async () => {
+  // Listen to authentication state and set user
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        updateInventory(currentUser.uid);  // Fetch user-specific inventory
+      }
+    });
+    return () => unsubscribe();  // Cleanup listener on component unmount
+  }, []);
+
+  const updateInventory = async (userId) => {
+    if (!userId) return;  // Prevent fetching if no user
+
     try {
-      const snapshot = await getDocs(query(collection(firestore, 'inventory')));
+      const userInventoryRef = collection(firestore, `users/${userId}/inventory`);
+      const snapshot = await getDocs(query(userInventoryRef));
       const inventoryList = snapshot.docs.map((doc) => ({
         name: doc.id,
         ...doc.data(),
@@ -30,7 +46,9 @@ export default function Pantry() {
   };
 
   const addItem = async (item) => {
-    const docRef = doc(collection(firestore, 'inventory'), item);
+    if (!user) return;  // Ensure the user is authenticated
+
+    const docRef = doc(collection(firestore, `users/${user.uid}/inventory`), item);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const { quantity } = docSnap.data();
@@ -38,11 +56,13 @@ export default function Pantry() {
     } else {
       await setDoc(docRef, { quantity: 1 });
     }
-    await updateInventory();
+    await updateInventory(user.uid);
   };
 
   const removeItem = async (item) => {
-    const docRef = doc(collection(firestore, 'inventory'), item);
+    if (!user) return;
+
+    const docRef = doc(collection(firestore, `users/${user.uid}/inventory`), item);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const { quantity } = docSnap.data();
@@ -52,7 +72,7 @@ export default function Pantry() {
         await setDoc(docRef, { quantity: quantity - 1 });
       }
     }
-    await updateInventory();
+    await updateInventory(user.uid);
   };
 
   const handleOpen = () => {
@@ -66,10 +86,6 @@ export default function Pantry() {
   const handleResponseModalClose = () => {
     setResponseModalOpen(false);
   };
-
-  useEffect(() => {
-    updateInventory(); // Fetch the inventory on component mount
-  }, []);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
