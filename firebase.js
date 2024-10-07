@@ -33,6 +33,20 @@ export const signInWithGoogle = async () => {
   }
 };
 
+export const listenToAuthState = (onUserAuthenticated, onUserNotAuthenticated) => {
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // User is authenticated
+      console.log("User is authenticated:", user);
+      if (onUserAuthenticated) onUserAuthenticated(user);
+    } else {
+      // No user is authenticated
+      console.log("No user is authenticated.");
+      if (onUserNotAuthenticated) onUserNotAuthenticated();
+    }
+  });
+};
+
 // Sign-out method with routing
 export const signOutUser = async () => {
   try {
