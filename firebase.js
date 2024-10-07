@@ -9,7 +9,7 @@ import { getFirestore } from 'firebase/firestore';
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCX1kyDVtCNLj7ZTyIxX0AMauXKg1ybObE",
-  authDomain: "inventory-management-kappa-three.vercel.app",
+  authDomain: "inventory-management-e3ff1.firebaseapp.com",
   projectId: "inventory-management-e3ff1",
   storageBucket: "inventory-management-e3ff1.appspot.com",
   messagingSenderId: "135568906089",
